@@ -1,5 +1,15 @@
 {
+  "name": "haxbot",
+  "version": "1.0.0",
+  "description": "Haxball Headless Bot",
+  "main": "run.js",
+  "scripts": {
+    "start": "node run.js"
+  },
   "dependencies": {
-    "puppeteer": "^25.16.0"
+    "puppeteer": "^21.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
