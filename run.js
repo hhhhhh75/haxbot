@@ -3,7 +3,6 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
-// سيرفر ويب باش يبقى ريلواي مخليه خدام وما يطفيهش
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
   res.end('Haxball Bot is alive and running!');
@@ -31,21 +30,20 @@ server.listen(PORT, () => {
 
   const page = await browser.newPage();
 
-  // تحديد User-Agent باش Haxball ما يبلوكيهش
+  // تزوير المتصفح باش ما يبلوكيهش Haxball
   await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-  // عرض كونسول اللعبة مباشرة فـ Railway
   page.on('console', msg => console.log('[Haxball]', msg.text()));
 
-  // فتح الرابط الرسمي الصحيح
+  // الرابط الصحيح الرسمي بدون 404
   await page.goto('https://www.haxball.com/headlessweb', { 
-    waitUntil: 'domcontentloaded' 
+    waitUntil: 'networkidle2' 
   });
 
-  // تسنى حتى تكمل دالة HBInit (عطيناه 60 ثانية باش ما يوقعش Timeout)
-  await page.waitForFunction(() => typeof window.HBInit === 'function', { timeout: 60000 });
+  // انتظار HBInit
+  await page.waitForFunction(() => typeof window.HBInit === 'function');
 
-  // حقن الماب وتشغيل السكربت
+  // تشغيل السكربت والماب
   await page.evaluate((script, map) => {
     window.customMapString = map;
     eval(script);
