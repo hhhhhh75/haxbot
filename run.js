@@ -3,7 +3,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
-// سيرفر ويب وهمي للحفاظ على اتصال السيرفر السحابي
+// سيرفر ويب وهمي للحفاظ على السيرفر نشطاً
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
   res.end('Haxball Bot is alive and running!');
@@ -15,11 +15,9 @@ server.listen(PORT, () => {
 });
 
 (async () => {
-  // قراءة كود البوت وكود الماب
   const botScript = fs.readFileSync(path.join(__dirname, 'haxbot-EN.js'), 'utf8');
   const mapData = fs.readFileSync(path.join(__dirname, 'map.hbs'), 'utf8');
 
-  // إعداد وتشغيل متصفح Puppeteer
   const browser = await puppeteer.launch({
     headless: "new",
     args: [
@@ -33,12 +31,16 @@ server.listen(PORT, () => {
 
   const page = await browser.newPage();
 
-  // طباعة رسائل كونسول المتصفح (رابط الروم والرسائل) في سجلات السيرفر
+  // التقاط رسائل كونسول الصفحة
   page.on('console', msg => console.log('[Haxball]', msg.text()));
 
-  await page.goto('https://www.haxball.com/headlessweb', { waitUntil: 'networkidle2' });
+  // فتح صفحة الهيدلس الصحيحة
+  await page.goto('https://html5.haxball.com/headlessweb', { waitUntil: 'networkidle2' });
 
-  // تمرير المتغيرات وتنفيذ السكربت داخل صفحة Haxball
+  // انتظار تحميل كائن HBInit لتفادي خطأ ReferenceError
+  await page.waitForFunction(() => typeof window.HBInit === 'function');
+
+  // تنفيذ كود البوت
   await page.evaluate((script, map) => {
     window.customMapString = map;
     eval(script);
