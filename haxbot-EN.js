@@ -11,7 +11,7 @@ const room = HBInit({
     maxPlayers: maxPlayers,
     public: roomPublic,
     playerName: botName,
-	token: window.__HAXBALL_TOKEN
+	token: "thr1.AAAAAGrvqfxJkZH0eQTAnQ.PSgvbow9ddc"
 });
     geo: geo[0]
 
