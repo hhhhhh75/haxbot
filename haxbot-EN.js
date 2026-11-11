@@ -11,9 +11,9 @@ const room = HBInit({
     maxPlayers: maxPlayers,
     public: roomPublic,
     playerName: botName,
-	token: window.__HAXBALL_TOKEN
+	token: window.__HAXBALL_TOKEN,
+	geo: window.__HAXBALL_GEO
 });
-    geo: geo[0]
 
 const scoreLimitPractice = 3;
 const timeLimitPractice = 3;

@@ -21,6 +21,17 @@ function normalizeToken(raw) {
 
 const HAXBALL_TOKEN = normalizeToken(process.env.HAXBALL_TOKEN);
 
+// Optional room geolocation, e.g. GEO_CODE=MA GEO_LAT=33.5731 GEO_LON=-7.5898.
+// Leave GEO_CODE empty to let HaxBall pick the default.
+const GEO_CODE = (process.env.GEO_CODE || '').trim();
+const GEO = GEO_CODE
+  ? {
+      code: GEO_CODE.toUpperCase(),
+      lat: Number(process.env.GEO_LAT || 33.5731),
+      lon: Number(process.env.GEO_LON || -7.5898)
+    }
+  : undefined;
+
 const RETRY_BASE_MS = 15000;
 const RETRY_MAX_MS = 120000;
 const ROOM_LINK_TIMEOUT_MS = 45000;
@@ -67,6 +78,7 @@ async function waitForRoomLink(page, timeoutMs) {
 
 async function startBot() {
   assertToken();
+  console.log(GEO ? `Geo: ${GEO.code} (${GEO.lat}, ${GEO.lon})` : 'Geo: not set');
 
   const browser = await puppeteer.launch({
     headless: 'new',
@@ -111,9 +123,10 @@ async function startBot() {
     console.log('HBInit is ready.');
 
     const injected = await page.evaluate(
-      (script, map, token) => {
+      (script, map, token, geo) => {
         window.customMapString = map;
         window.__HAXBALL_TOKEN = token;
+        window.__HAXBALL_GEO = geo;
         window.__roomLink = null;
         window.__room = null;
 
@@ -148,7 +161,8 @@ async function startBot() {
       },
       botScript,
       mapData,
-      HAXBALL_TOKEN
+      HAXBALL_TOKEN,
+      GEO
     );
 
     if (!injected || !injected.ok) {
