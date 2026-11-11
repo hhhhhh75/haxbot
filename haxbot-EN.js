@@ -12,7 +12,9 @@ const room = HBInit({
     public: roomPublic,
     playerName: botName,
 	token: window.__HAXBALL_TOKEN,
-	geo: window.__HAXBALL_GEO
+	// GEO_CODE/GEO_LAT/GEO_LON from the environment win, otherwise the
+	// coordinates above (Casablanca) are used.
+	geo: window.__HAXBALL_GEO || geo[0]
 });
 
 const scoreLimitPractice = 3;
