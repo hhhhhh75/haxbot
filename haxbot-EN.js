@@ -3,7 +3,7 @@ const roomName = "🏆 𝗙𝘂𝘁𝘀𝗮𝗹 3𝘃3 | STR 🏆";
 const botName = "L9je3";
 const maxPlayers = 24; // maximum number of players in the room
 const roomPublic = true; // true = public room | false = players only enter via the room link (it does not appear in the room list)
-const geo = [{"code": "MA", "lat": 46.2, "lon": 2.2}]; 
+const geo = [{ code: "MA", lat: 33.5731, lon: -7.5898 }]; 
 // place your geoloc, so as not to have a leaky room
 
 const room = HBInit({
