@@ -83,6 +83,18 @@ fi
 
 echo "==> Installing npm dependencies (this downloads Chromium, be patient)"
 cd "$APP_DIR"
+CHROME_PATH_LINE="# CHROME_PATH=/usr/bin/chromium"
+case "$(uname -m)" in
+  aarch64|arm64)
+    # Chrome for Testing has no linux-arm64 build, so Puppeteer cannot download
+    # a browser here: use the distribution Chromium (snap) instead.
+    echo "    ARM detected -> using the system Chromium"
+    apt-get install -y snapd || true
+    snap install chromium || true
+    export PUPPETEER_SKIP_DOWNLOAD=1
+    CHROME_PATH_LINE="CHROME_PATH=/snap/bin/chromium"
+    ;;
+esac
 npm install --omit=dev
 
 echo "==> Writing ${ENV_FILE}"
@@ -91,6 +103,7 @@ if [ -z "$TOKEN" ]; then
 fi
 cat > "$ENV_FILE" <<EOF
 HAXBALL_TOKEN=${TOKEN}
+${CHROME_PATH_LINE}
 # Room geolocation (${GEO_CODE_ARG}). Delete these lines to leave it unset.
 GEO_CODE=${GEO_CODE}
 GEO_LAT=${GEO_LAT}
