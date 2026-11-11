@@ -2,10 +2,13 @@
 # HaxBall bot — one-shot setup for Ubuntu 22.04 / 24.04
 #
 # Usage:
-#   sudo bash deploy/setup.sh [REPO_URL] [HAXBALL_TOKEN]
+#   sudo bash deploy/setup.sh [REPO_URL] [HAXBALL_TOKEN] [GEO_CODE]
 #
 # Example:
-#   sudo bash deploy/setup.sh https://github.com/hhhhhh75/haxbot.git thr1.xxxxx.xxxxx
+#   sudo bash deploy/setup.sh https://github.com/hhhhhh75/haxbot.git thr1.xxxxx.xxxxx ES
+#
+# GEO_CODE is the country the room is advertised in: MA (Casablanca, default)
+# or ES (Madrid). Pass "none" to leave it unset.
 #
 # What it does:
 #   - installs Node.js 20 + Chromium runtime libraries
@@ -18,6 +21,16 @@ set -euo pipefail
 
 REPO_URL="${1:-https://github.com/hhhhhh75/haxbot.git}"
 TOKEN="${2:-}"
+GEO_CODE_ARG="$(echo "${3:-MA}" | tr '[:lower:]' '[:upper:]')"
+
+# Room geolocation: the country the room is listed in, with that region's
+# approximate coordinates.
+case "$GEO_CODE_ARG" in
+  MA) GEO_CODE=MA; GEO_LAT=33.5731;  GEO_LON=-7.5898 ;;
+  ES) GEO_CODE=ES; GEO_LAT=40.4168;  GEO_LON=-3.7038 ;;
+  NONE|"") GEO_CODE=""; GEO_LAT=""; GEO_LON="" ;;
+  *) GEO_CODE="$GEO_CODE_ARG"; GEO_LAT=""; GEO_LON="" ;;
+esac
 
 APP_DIR="${APP_DIR:-/opt/haxbot}"
 ENV_FILE="/etc/haxbot.env"
@@ -78,10 +91,10 @@ if [ -z "$TOKEN" ]; then
 fi
 cat > "$ENV_FILE" <<EOF
 HAXBALL_TOKEN=${TOKEN}
-# Room geolocation (remove these lines to leave it unset)
-GEO_CODE=MA
-GEO_LAT=33.5731
-GEO_LON=-7.5898
+# Room geolocation (${GEO_CODE_ARG}). Delete these lines to leave it unset.
+GEO_CODE=${GEO_CODE}
+GEO_LAT=${GEO_LAT}
+GEO_LON=${GEO_LON}
 EOF
 chmod 600 "$ENV_FILE"
 
