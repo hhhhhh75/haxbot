@@ -97,6 +97,33 @@ case "$(uname -m)" in
 esac
 npm install --omit=dev
 
+# Newer npm versions can refuse to run package install scripts, in which case
+# Puppeteer never downloads its browser. Detect that and fetch it explicitly.
+BROWSER_FOUND=""
+for c in chromium chromium-browser google-chrome google-chrome-stable; do
+  if command -v "$c" >/dev/null 2>&1; then
+    BROWSER_FOUND="$(command -v "$c")"
+    break
+  fi
+done
+if [ -n "$BROWSER_FOUND" ]; then
+  echo "==> Using the system browser: ${BROWSER_FOUND}"
+  CHROME_PATH_LINE="CHROME_PATH=${BROWSER_FOUND}"
+else
+  echo "==> Downloading the Puppeteer browser (npm may have skipped it)"
+  if [ -f node_modules/puppeteer/install.mjs ]; then
+    node node_modules/puppeteer/install.mjs || true
+  else
+    npx --yes puppeteer browsers install chrome || true
+  fi
+  ls -1 "${HOME}/.cache/puppeteer" 2>/dev/null || true
+  CHROME_PATH_LINE="# CHROME_PATH=/usr/bin/chromium"
+fi
+
+# Node is installed under /usr/bin on Ubuntu via NodeSource, but keep it robust:
+NODE_BIN="$(command -v node || echo /usr/bin/node)"
+echo "==> Node binary: ${NODE_BIN}"
+
 echo "==> Writing ${ENV_FILE}"
 if [ -z "$TOKEN" ]; then
   echo "WARNING: no token passed. Edit ${ENV_FILE} and set HAXBALL_TOKEN." >&2
@@ -111,6 +138,17 @@ GEO_LON=${GEO_LON}
 EOF
 chmod 600 "$ENV_FILE"
 
+if [ "$(ps -p 1 -o comm= 2>/dev/null || echo unknown)" != "systemd" ]; then
+  echo "==> No systemd here (container / sandbox). Using the plain supervisor instead."
+  bash "${APP_DIR}/deploy/start-nosystemd.sh"
+  echo
+  echo "Done."
+  echo "  tail -f /var/log/haxbot.log      # live logs"
+  echo "  bash ${APP_DIR}/deploy/start-nosystemd.sh        # restart"
+  echo "  bash ${APP_DIR}/deploy/start-nosystemd.sh stop   # stop"
+  exit 0
+fi
+
 echo "==> Installing systemd service ${SERVICE}"
 cat > "/etc/systemd/system/${SERVICE}.service" <<EOF
 [Unit]
@@ -122,7 +160,7 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=${APP_DIR}
 EnvironmentFile=${ENV_FILE}
-ExecStart=/usr/bin/node run.js
+ExecStart=${NODE_BIN} run.js
 Restart=always
 RestartSec=10
 User=root
