@@ -146,6 +146,16 @@ else
   CHROME_PATH_LINE="# CHROME_PATH=/usr/bin/chromium"
 fi
 
+# Ubuntu 24.04 sets vm.mmap_rnd_bits=32, which makes older Chrome builds
+# (the 121 pinned by Puppeteer 21) die instantly with a segmentation fault.
+# Lowering it to 28 fixes the crash; newer browsers are unaffected.
+RND_BITS="$(sysctl -n vm.mmap_rnd_bits 2>/dev/null || echo)"
+if [ -n "$RND_BITS" ] && [ "$RND_BITS" -gt 28 ] 2>/dev/null; then
+  echo "==> vm.mmap_rnd_bits=${RND_BITS} -> lowering to 28 (Chrome segfaults otherwise)"
+  echo 'vm.mmap_rnd_bits = 28' > /etc/sysctl.d/99-chrome-segfault.conf
+  sysctl -w vm.mmap_rnd_bits=28 >/dev/null 2>&1 || true
+fi
+
 echo "==> Writing ${ENV_FILE}"
 if [ -z "$TOKEN" ]; then
   echo "WARNING: no token passed. Edit ${ENV_FILE} and set HAXBALL_TOKEN." >&2
