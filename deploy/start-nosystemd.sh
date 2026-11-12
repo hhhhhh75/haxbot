@@ -40,7 +40,8 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
-NODE_BIN="$(command -v node || echo /usr/bin/node)"
+NODE_BIN=/usr/bin/node
+[ -x "$NODE_BIN" ] || NODE_BIN="$(command -v node || echo /usr/bin/node)"
 if [ ! -x "$NODE_BIN" ]; then
   echo "ERROR: node not found in PATH." >&2
   exit 1

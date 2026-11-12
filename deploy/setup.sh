@@ -48,12 +48,37 @@ apt-get update -y
 apt-get install -y curl ca-certificates git gnupg
 
 echo "==> Installing Node.js ${NODE_MAJOR}"
-if ! command -v node >/dev/null 2>&1 || [ "$(node -p 'process.versions.node.split(".")[0]')" -lt "$NODE_MAJOR" ]; then
+# Puppeteer 21 and its dependencies break on much newer Node majors
+# ("require is not defined in ES module scope" with Node 26), so pin the exact
+# major instead of only checking a minimum.
+NEED_NODE=1
+if [ -x /usr/bin/node ]; then
+  CUR_MAJOR="$(/usr/bin/node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
+  [ "$CUR_MAJOR" = "$NODE_MAJOR" ] && NEED_NODE=0
+fi
+if [ "$NEED_NODE" -eq 1 ]; then
+  if [ -x /usr/bin/node ]; then
+    echo "    found Node $(/usr/bin/node --version 2>/dev/null || echo unknown) -> replacing with ${NODE_MAJOR}.x"
+  fi
+  apt-get remove -y nodejs npm >/dev/null 2>&1 || true
   curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
   apt-get install -y nodejs
 fi
-node --version
-npm --version
+
+NODE_BIN=/usr/bin/node
+NPM_BIN=/usr/bin/npm
+[ -x "$NODE_BIN" ] || NODE_BIN="$(command -v node)"
+"$NODE_BIN" --version
+
+# Run npm through the pinned node binary: /usr/bin/npm has a
+# "#!/usr/bin/env node" shebang and would otherwise pick up another Node
+# (for example an nvm install) from PATH.
+if [ -f /usr/lib/node_modules/npm/bin/npm-cli.js ]; then
+  NPM_CMD=("$NODE_BIN" /usr/lib/node_modules/npm/bin/npm-cli.js)
+else
+  NPM_CMD=("$NPM_BIN")
+fi
+"${NPM_CMD[@]}" --version
 
 echo "==> Installing Chromium runtime libraries"
 # Package names differ between Ubuntu 22.04 and 24.04 (t64 transition),
@@ -95,7 +120,7 @@ case "$(uname -m)" in
     CHROME_PATH_LINE="CHROME_PATH=/snap/bin/chromium"
     ;;
 esac
-npm install --omit=dev
+"${NPM_CMD[@]}" install --omit=dev
 
 # Newer npm versions can refuse to run package install scripts, in which case
 # Puppeteer never downloads its browser. Detect that and fetch it explicitly.
@@ -112,17 +137,14 @@ if [ -n "$BROWSER_FOUND" ]; then
 else
   echo "==> Downloading the Puppeteer browser (npm may have skipped it)"
   if [ -f node_modules/puppeteer/install.mjs ]; then
-    node node_modules/puppeteer/install.mjs || true
+    "$NODE_BIN" node_modules/puppeteer/install.mjs || true
   else
-    npx --yes puppeteer browsers install chrome || true
+    echo "    WARNING: install.mjs missing, install a browser manually:" >&2
+    echo "    cd ${APP_DIR} && ${NODE_BIN} -e \"require('puppeteer/install.mjs')\"" >&2
   fi
   ls -1 "${HOME}/.cache/puppeteer" 2>/dev/null || true
   CHROME_PATH_LINE="# CHROME_PATH=/usr/bin/chromium"
 fi
-
-# Node is installed under /usr/bin on Ubuntu via NodeSource, but keep it robust:
-NODE_BIN="$(command -v node || echo /usr/bin/node)"
-echo "==> Node binary: ${NODE_BIN}"
 
 echo "==> Writing ${ENV_FILE}"
 if [ -z "$TOKEN" ]; then
