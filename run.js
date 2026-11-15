@@ -3,13 +3,34 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
+// Some hosts (Botkeep, Pterodactyl-style panels) write the configured variables
+// to a .env file next to the code instead of exporting them to the process.
+// Load it before anything reads process.env.
+(function loadDotEnv() {
+  const envPath = path.join(__dirname, '.env');
+  if (!fs.existsSync(envPath)) return;
+  for (const line of fs.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+    const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+    if (!match) continue;
+    let value = match[2].trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (process.env[match[1]] === undefined) process.env[match[1]] = value;
+  }
+})();
+
 const PORT = process.env.PORT || 3000;
 
 // The old https://www.haxball.com/headlessweb endpoint now returns 404.
 // The headless client lives at /headless and exposes HBInit on the top window.
 const HEADLESS_URL = 'https://www.haxball.com/headless';
 
-// Never commit the room token. Set HAXBALL_TOKEN in Railway -> Variables.
+// Never commit the room token. Set HAXBALL_TOKEN in the host environment
+// (Botkeep -> Environment, Railway -> Variables, or /etc/haxbot.env).
 // Be forgiving about copy/paste mistakes such as "HAXBALL_TOKEN = thr1..." or quotes.
 function normalizeToken(raw) {
   if (!raw) return '';
@@ -53,7 +74,8 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 function assertToken() {
   if (!HAXBALL_TOKEN) {
     throw new Error(
-      'HAXBALL_TOKEN is not set. Add it in Railway -> Variables and redeploy.'
+      'HAXBALL_TOKEN is not set. Add it to the environment ' +
+        '(Botkeep -> Environment, Railway -> Variables, or /etc/haxbot.env) and restart.'
     );
   }
   if (!HAXBALL_TOKEN.startsWith('thr1.')) {
