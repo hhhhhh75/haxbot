@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log*
+.env
+.env.*
+out.txt
+err.txt
+.git
+.gitignore
+deploy
+Dockerfile
+fly.toml
+README.md

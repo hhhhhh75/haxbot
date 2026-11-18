@@ -104,6 +104,10 @@ async function startBot() {
 
   const browser = await puppeteer.launch({
     headless: 'new',
+    // Small VMs (Fly.io shared-cpu) can take longer than the 180 s default to
+    // answer the first CDP calls; without this Chrome "times out" and the bot
+    // restarts in a loop.
+    protocolTimeout: 300000,
     // Use a system Chromium when provided (needed on ARM, where the bundled
     // Chrome for Testing build does not exist).
     executablePath: process.env.CHROME_PATH || undefined,
@@ -111,7 +115,10 @@ async function startBot() {
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
-      '--disable-gpu'
+      '--disable-gpu',
+      '--disable-software-rasterizer',
+      '--disable-background-timer-throttling',
+      '--disable-renderer-backgrounding'
     ]
   });
 
