@@ -1,5 +1,5 @@
 /* ROOM */
-const roomName = "🏆 𝗙𝘂𝘁𝘀𝗮𝗹 3𝘃3 | STR 🏆";
+const roomName = "🟥 𝗙𝘂𝘁𝘀𝗮𝗹 3𝘃3 | STR (NEW PING) 🟥";
 const botName = "L9je3";
 const maxPlayers = 24; // maximum number of players in the room
 const roomPublic = true; // true = public room | false = players only enter via the room link (it does not appear in the room list)
@@ -99,7 +99,7 @@ var msg1;
 var msg1Time = 1500000;
 var Deus = [];
 var BotdivulgaTime = 900000;
-var adminPassword = 4002;
+var adminPassword = 6002;
 
 var vip1 = [];
 var vip2 = [];
