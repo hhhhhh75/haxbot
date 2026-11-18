@@ -116,9 +116,9 @@ async function startBot() {
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
-      '--disable-software-rasterizer',
-      '--disable-background-timer-throttling',
-      '--disable-renderer-backgrounding'
+      // HaxBall's docs: on a VPS, Chrome >= 78 hides the local IP behind mDNS,
+      // which breaks hosting (room created but nobody can join).
+      '--disable-features=WebRtcHideLocalIpsWithMdns'
     ]
   });
 
@@ -138,6 +138,16 @@ async function startBot() {
     });
     page.on('pageerror', (err) => {
       console.error('[Haxball pageerror]', err.message);
+    });
+
+    // Why the room never registers is invisible from Node: the failure happens
+    // inside the page (captcha, WebSocket handshake, token rejection). Keep a
+    // minimal trace for `fly logs`.
+    page.on('requestfailed', (req) => {
+      const url = req.url();
+      if (!/haxball|hbserver|webrtc/i.test(url)) return;
+      const failure = req.failure();
+      console.log('[net] failed:', url, (failure && failure.errorText) || '?');
     });
 
     console.log('Navigating to', HEADLESS_URL);
@@ -207,9 +217,38 @@ async function startBot() {
 
     const link = await waitForRoomLink(page, ROOM_LINK_TIMEOUT_MS);
     if (!link) {
+      // HaxBall asks for a captcha whenever the token is missing, invalid or
+      // expired (tokens from /headlesstoken only live a few minutes). Detect
+      // the widget so the logs say exactly what to do instead of "unknown".
+      const captcha = await page
+        .evaluate(() => {
+          const hasWidget = (doc) => {
+            const el = doc.getElementById && doc.getElementById('recaptcha');
+            return Boolean(el && el.childElementCount > 0);
+          };
+          if (hasWidget(document)) return true;
+          for (const frame of Array.from(document.querySelectorAll('iframe'))) {
+            try {
+              if (frame.contentDocument && hasWidget(frame.contentDocument)) return true;
+            } catch (e) {
+              // cross-origin frame, ignore
+            }
+          }
+          return false;
+        })
+        .catch(() => false);
+
+      if (captcha) {
+        throw new Error(
+          'HaxBall displayed a CAPTCHA instead of the room link: HAXBALL_TOKEN is ' +
+            'missing, invalid or expired. Tokens from https://www.haxball.com/headlesstoken ' +
+            'expire after a few minutes, so a fresh one must be set right before the bot starts.'
+        );
+      }
+
       throw new Error(
-        `Room did not register (no room link after ${ROOM_LINK_TIMEOUT_MS / 1000}s). ` +
-          'HaxBall rejected the token (check HAXBALL_TOKEN) or the connection is blocked.'
+        `Room did not register (no room link after ${ROOM_LINK_TIMEOUT_MS / 1000}s) ` +
+          'and no captcha was shown: the connection to HaxBall failed.'
       );
     }
     console.log('Room is live:', link);
